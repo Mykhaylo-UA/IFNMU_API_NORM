@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ContentModelStore">
+    <e p="$USER_HOME$/.cache/JetBrains/Rider2020.3/extResources" t="IncludeRecursive" />
+    <e p="$USER_HOME$/.cache/JetBrains/Rider2020.3/resharper-host/local/Transient/Rider/v203/SolutionCaches/_IFNMU_API_NORM.-229220140.00" t="ExcludeRecursive" />
+    <e p="$PROJECT_DIR$" t="IncludeRecursive">
+      <e p=".gitignore" t="Include" />
+      <e p="Abstract" t="Include">
+        <e p="BaseModel.cs" t="Include" />
+      </e>
+      <e p="Controllers" t="Include">
+        <e p="ScheduleController.cs" t="Include" />
+      </e>
+      <e p="Enums" t="Include">
+        <e p="Faculty.cs" t="Include" />
+        <e p="LessonType.cs" t="Include" />
+        <e p="ScheduleType.cs" t="Include" />
+        <e p="WeekType.cs" t="Include" />
+      </e>
+      <e p="IFNMU_API_NORM.csproj" t="IncludeRecursive" />
+      <e p="IFNMU_API_NORM.sln" t="IncludeFlat" />
+      <e p="Models" t="Include">
+        <e p="DatabaseContext.cs" t="Include" />
+        <e p="Day.cs" t="Include" />
+        <e p="Lesson.cs" t="Include" />
+        <e p="Schedule.cs" t="Include" />
+        <e p="Week.cs" t="Include" />
+      </e>
+      <e p="Program.cs" t="Include" />
+      <e p="Properties" t="Include">
+        <e p="launchSettings.json" t="Include" />
+      </e>
+      <e p="Startup.cs" t="Include" />
+      <e p="ViewModels" t="Include">
+        <e p="DayViewModel.cs" t="Include" />
+        <e p="LessonViewModel.cs" t="Include" />
+        <e p="ScheduleViewModel.cs" t="Include" />
+      </e>
+      <e p="appsettings.Development.json" t="Include" />
+      <e p="appsettings.json" t="Include" />
+      <e p="bin" t="ExcludeRecursive" />
+      <e p="db.db" t="Include" />
+      <e p="obj" t="ExcludeRecursive">
+        <e p="Debug" t="Include">
+          <e p="net5.0" t="Include">
+            <e p="IFNMU_API_NORM.AssemblyInfo.cs" t="Include" />
+          </e>
+        </e>
+      </e>
+      <e p="packages" t="ExcludeRecursive" />
+    </e>
+  </component>
+</project>
