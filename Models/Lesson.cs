@@ -9,6 +9,7 @@ namespace IFNMU_API_NORM.Models
         public string Name { get; set; }
         public byte Number { get; set; }
         public LessonType LessonType { get; set; }
+        public string NumberAuditor { get; set; }
         
         [JsonIgnore]
         public Guid DayId { get; set; }

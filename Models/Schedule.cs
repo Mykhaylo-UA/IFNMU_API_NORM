@@ -11,6 +11,8 @@ namespace IFNMU_API_NORM.Models
         public Faculty Faculty { get; set; }
         
         public List<Week> Weeks { get; set; }
+        
+        public string LectionInfo { get; set; }
 
         public Schedule()
         {
