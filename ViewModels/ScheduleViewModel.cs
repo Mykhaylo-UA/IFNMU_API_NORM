@@ -8,5 +8,11 @@ namespace IFNMU_API_NORM.ViewModels
         public List<DayViewModel> Days { get; set; }
         
         public List<string> NameLessons { get; set; }
+
+        public ScheduleViewModel()
+        {
+            NameLessons = new List<string>();
+            Days = new List<DayViewModel>();
+        }
     }
 }

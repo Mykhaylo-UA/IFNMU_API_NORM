@@ -7,7 +7,8 @@ namespace IFNMU_API_NORM.Models
 {
     public class Day : BaseModel
     {
-        public DayOfWeek DayOfWeek { get; set; }
+        public DayOfWeek? DayOfWeek { get; set; }
+        public DateTime? DateTime { get; set; }
         
         [JsonIgnore]
         public Guid WeekId { get; set; }

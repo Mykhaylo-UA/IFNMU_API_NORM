@@ -7,6 +7,7 @@
       <e p=".gitignore" t="Include" />
       <e p="Abstract" t="Include">
         <e p="BaseModel.cs" t="Include" />
+        <e p="IDay.cs" t="Include" />
       </e>
       <e p="Controllers" t="Include">
         <e p="ScheduleController.cs" t="Include" />
