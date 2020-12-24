@@ -381,6 +381,9 @@ namespace IFNMU_API_NORM.Controllers
                                              Faculty = (Faculty)faculty,
                                              LectionInfo = lectionInfo
                                          };
+                                         _context.Schedules.Add(schedule);
+                                         await _context.SaveChangesAsync();
+                                         
                                          schedule.Weeks.Add(new Week()
                                          {
                                              WeekType = WeekType.WithNumber,
@@ -439,6 +442,9 @@ namespace IFNMU_API_NORM.Controllers
                                          Faculty = (Faculty)faculty,
                                          LectionInfo = lectionInfo
                                      };
+                                     _context.Schedules.Add(schedule);
+                                     await _context.SaveChangesAsync();
+                                     
                                      schedule.Weeks.Add(new Week()
                                      {
                                          WeekType = WeekType.WithNumber,
@@ -497,6 +503,155 @@ namespace IFNMU_API_NORM.Controllers
 
          
 
+         [HttpGet]
+         [Route("getFullSchedule")]
+         public async Task<IActionResult> GetFullShedule([FromQuery]byte? course, [FromQuery]Faculty? faculty, [FromQuery]DateTime? startDate)
+         {
+             if (course == null) return BadRequest("course is null");
+             if (faculty == null) return BadRequest("faculty is null");
+             if (startDate == null) return BadRequest("startDate is null");
+
+             ScheduleViewModel model = new ScheduleViewModel()
+             {
+                 Days = new List<DayViewModel>()
+                 {
+                     new DayViewModel(){DateTime = startDate.GetValueOrDefault()},
+                     new DayViewModel(){DateTime = startDate.GetValueOrDefault().AddDays(1)},
+                     new DayViewModel(){DateTime = startDate.GetValueOrDefault().AddDays(2)},
+                     new DayViewModel(){DateTime = startDate.GetValueOrDefault().AddDays(3)},
+                     new DayViewModel(){DateTime = startDate.GetValueOrDefault().AddDays(4)}
+                 }
+             };
+
+             List<Schedule> schedules = await _context.Schedules
+                 .Include(s => s.Weeks.Where(w=>w.StartDate == (DateTime)startDate))
+                 .ThenInclude(w=>w.Days)
+                 .ThenInclude(d=>d.Lessons)
+                 .Where(s => s.Course == (byte)course && s.Faculty == (Faculty)faculty)
+                 .ToListAsync();
+             
+             List<LectionInfo> lectionInfos = new List<LectionInfo>();
+             
+             if (schedules[0].LectionInfo != null)
+             {
+                 
+                 string[] lectionSlesh = schedules[0].LectionInfo.Trim().Split("/");
+                 foreach (string ls in lectionSlesh)
+                 {
+                     string[] lectionDefis = ls.Trim().Split("-");
+                     LectionInfo info = new LectionInfo() {Letter = lectionDefis[0].Trim()};
+
+                     string[] groups = lectionDefis[1].Trim().Split(",");
+
+                     foreach (string s in groups)
+                     {
+                         info.Groups.Add(s.Trim());
+                     }
+
+                     lectionInfos.Add(info);
+                 }
+             }
+             
+
+             List<Lesson> lessons = new List<Lesson>();
+             List<Day> days = new List<Day>();
+             
+             foreach (var schedule in schedules)
+             {
+                 foreach (var week in schedule.Weeks)
+                 {
+                     days.AddRange(week.Days);
+                     foreach (var day in week.Days)
+                     {
+                         lessons.AddRange(day.Lessons);
+                     }
+                 }
+             }
+             
+             Regex regex = new Regex(@"\W\w\s\d*\W");
+             for(int b=0; b<lessons.Count; b++)
+             {
+                 if (lessons[b].Number >= 4) lessons[b].Number = 3;
+                 else if(lessons[b].Number == 2) lessons[b].Number = 1;
+                 
+                 MatchCollection matches = regex.Matches(lessons[b].Name);
+                 if (matches.Count > 0)
+                 {
+                     foreach (Match match in matches)
+                     {
+                         lessons[b].Name = lessons[b].Name.Replace(match.Value, "").Trim();
+                     }
+                 }
+             }
+             
+             
+
+             var groupLessonName = lessons.GroupBy(l => l.Name);
+
+             foreach (var ln in groupLessonName)
+             {
+                 model.NameLessons.Add(ln.Key);
+
+                 var groupOfDay = ln.GroupBy(l => l.Day.DateTime);
+
+                 foreach (var o in groupOfDay)
+                 {
+                     List<LessonViewModel> lvm = new List<LessonViewModel>();
+                     
+                     var groupOfNumber = o.GroupBy(d => d.Number);
+
+                     foreach (var k in groupOfNumber)
+                     {
+                         string name = "";
+                         
+                         foreach (var les in k)
+                         {
+                             
+                             if (les.LessonType == LessonType.Lection)
+                             {
+                                 string lec = "";
+                                 bool brea = false;
+                                 foreach (var s in lectionInfos)
+                                 {
+                                     foreach (var x in s.Groups)
+                                     {
+                                         if (les.Day.Week.Schedule.Group == x)
+                                         {
+                                             lec = $"{s.Letter},{les.Number},{les.NumberAuditor}";
+                                         }
+                                         brea = true;
+                                     }
+
+                                     if (brea)
+                                     {
+                                         break;
+                                     }
+                                 }
+
+                                 if (name.Contains(lec))
+                                 {
+                                     continue;
+                                 }
+                                 else
+                                 {
+                                     name += lec + " ";
+                                     continue;
+                                 }
+                             }
+                             
+                             name += les.Day.Week.Schedule.Group + " ";
+                         }
+                         
+                         lvm.Add(new LessonViewModel(){Number = k.Key, String = name});
+                     }
+
+                     model.Days.First(d => d.DateTime == o.Key).Lessons.Add(lvm);
+                 }
+             }
+             
+             return Ok(model);
+         }
+         
          [HttpPost]
          [Route("addFullSchedule")]
          public async Task<IActionResult> AddFullSchedule([FromBody] ScheduleViewModel model, [FromQuery] byte? course,
@@ -563,6 +718,8 @@ namespace IFNMU_API_NORM.Controllers
                                              Faculty = (Faculty)faculty,
                                              LectionInfo = lectionInfo
                                          };
+                                         
+                                         
                                          schedule.Weeks.Add(new Week()
                                          {
                                              WeekType = WeekType.WithDate,
@@ -587,8 +744,9 @@ namespace IFNMU_API_NORM.Controllers
                                          LessonType = LessonType.Lection,
                                          NumberAuditor = info[2]
                                      };
-                             
-                                     schedule.Weeks.First(w=> w.StartDate == model.Days[0].DateTime && w.FinishDate == model.Days[0].DateTime).Days.First(d=>d.DateTime==day.DateTime).Lessons.Add(lesson);
+                                     
+                                     schedule.Weeks.First(w=> w.StartDate == model.Days[0].DateTime.GetValueOrDefault()).Days.First(d=>d.DateTime==day.DateTime.GetValueOrDefault()).Lessons.Add(lesson);    
+                                     
                                  }
                                  
                              }
@@ -629,7 +787,7 @@ namespace IFNMU_API_NORM.Controllers
                                      LessonType = LessonType.Practice,
                                  };
                              
-                                 schedule.Weeks.First(w=> w.StartDate == model.Days[0].DateTime && w.FinishDate == model.Days[0].DateTime).Days.First(d=>d.DateTime==day.DateTime).Lessons.Add(lesson);    
+                                 schedule.Weeks.First(w=> w.StartDate == model.Days[0].DateTime.GetValueOrDefault()).Days.First(d=>d.DateTime==day.DateTime.GetValueOrDefault()).Lessons.Add(lesson);    
                              }
                          }
                      }
@@ -637,6 +795,204 @@ namespace IFNMU_API_NORM.Controllers
              }
 
              _context.Schedules.AddRange(schedules);
+             await _context.SaveChangesAsync();
+             
+             return Ok(schedules);
+         }
+         
+         [HttpPut]
+         [Route("editFullSchedule")]
+         public async Task<IActionResult> EditFullSchedule([FromBody] ScheduleViewModel model, [FromQuery] byte? course,
+             [FromQuery] Faculty? faculty, [FromQuery] string lectionInfo, [FromQuery]DateTime? startDate)
+         {
+             if(model == null) return BadRequest("Model is null");
+             if(model.Days == null) return BadRequest("Model.Days.Count is null");
+             if(faculty == null) return BadRequest("faculty is null");
+             if(course == null) return BadRequest("course is null");
+
+             List<LectionInfo> lectionInfos = new List<LectionInfo>();
+             
+             if (lectionInfo != null)
+             {
+                 
+                 string[] lectionSlesh = lectionInfo.Trim().Split("/");
+                 foreach (string ls in lectionSlesh)
+                 {
+                     string[] lectionDefis = ls.Trim().Split("-");
+                     LectionInfo info = new LectionInfo() {Letter = lectionDefis[0].Trim()};
+
+                     string[] groups = lectionDefis[1].Trim().Split(",");
+
+                     foreach (string s in groups)
+                     {
+                         info.Groups.Add(s.Trim());
+                     }
+
+                     lectionInfos.Add(info);
+                 }
+             }
+
+             List<Schedule> schedules = await _context.Schedules.Where(s=> s.Course == (byte)course && s.Faculty == (Faculty)faculty)
+                 .Include(s=> s.Weeks.Where(w=>w.StartDate==(DateTime)startDate)).ToListAsync();
+
+             foreach (var schedule in schedules)
+             {
+                 _context.Weeks.RemoveRange(schedule.Weeks);
+             }
+             await _context.SaveChangesAsync();
+             
+             foreach (DayViewModel day in model.Days)
+             {
+                 for(int a =0; a< day.Lessons.Count; a++)
+                 {
+                     for(int i=0; i< day.Lessons[a].Count; i++)
+                     {
+                         string[] splitStrings = day.Lessons[a][i].String.Split(" ");
+
+                         foreach (string group in splitStrings)
+                         {
+                             if (group.Contains(","))
+                             {
+                                 string[] info = group.Split(",");
+                                 string name = $"{model.NameLessons[a]} (Л {info[2]})";
+                                 byte number = Convert.ToByte(info[1]);
+
+                                 LectionInfo inf = lectionInfos.FirstOrDefault(g => g.Letter.ToUpper() == info[0].Trim().ToUpper());
+
+                                 if (inf == null) continue;
+                                 foreach (var gr in inf.Groups)
+                                 {
+                                     Schedule schedule = schedules.FirstOrDefault(s => s.Group == gr);
+                                     if (schedule == null)
+                                     {
+                                         schedule = new Schedule()
+                                         {
+                                             ScheduleType = ScheduleType.Full,
+                                             Group = gr,
+                                             Course = (byte)course,
+                                             Faculty = (Faculty)faculty,
+                                             LectionInfo = lectionInfo
+                                         };
+                                         _context.Schedules.Add(schedule);
+                                         await _context.SaveChangesAsync();
+                                         
+                                         schedule.Weeks.Add(new Week()
+                                         {
+                                             WeekType = WeekType.WithDate,
+                                             StartDate = model.Days[0].DateTime,
+                                             FinishDate = model.Days[0].DateTime.GetValueOrDefault().AddDays(4),
+                                             Days = new List<Day>()
+                                             {
+                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault()},
+                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(1)},
+                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(2)},
+                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(3)},
+                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(4)}
+                                             }
+                                         });
+                                         schedules.Add(schedule);
+                                     }
+
+                                     if (schedule.Weeks.FirstOrDefault(w => w.StartDate == startDate) == null)
+                                     {
+                                         schedule.Weeks.Add(new Week()
+                                         {
+                                             WeekType = WeekType.WithDate,
+                                             StartDate = model.Days[0].DateTime,
+                                             FinishDate = model.Days[0].DateTime.GetValueOrDefault().AddDays(4),
+                                             Days = new List<Day>()
+                                             {
+                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault()},
+                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(1)},
+                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(2)},
+                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(3)},
+                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(4)}
+                                             }
+                                         });
+                                     }
+                                     
+                                     Lesson lesson = new Lesson()
+                                     {
+                                         Name = name,
+                                         Number = number,
+                                         LessonType = LessonType.Lection,
+                                         NumberAuditor = info[2]
+                                     };
+                                     
+                                     schedule.Weeks.First(w=> w.StartDate == model.Days[0].DateTime.GetValueOrDefault()).Days.First(d=>d.DateTime==day.DateTime.GetValueOrDefault()).Lessons.Add(lesson);    
+                                     
+                                 }
+                                 
+                             }
+                             else
+                             {
+                                 Schedule schedule = schedules.FirstOrDefault(s => s.Group == group);
+                                 if (schedule == null)
+                                 {
+                                     schedule = new Schedule()
+                                     {
+                                         ScheduleType = ScheduleType.Full,
+                                         Group = group,
+                                         Course = (byte)course,
+                                         Faculty = (Faculty)faculty,
+                                         LectionInfo = lectionInfo
+                                     };
+                                     _context.Schedules.Add(schedule);
+                                     await _context.SaveChangesAsync();
+                                     
+                                     schedule.Weeks.Add(new Week()
+                                     {
+                                         WeekType = WeekType.WithDate,
+                                         StartDate = model.Days[0].DateTime,
+                                         FinishDate = model.Days[0].DateTime.GetValueOrDefault().AddDays(4),
+                                         Days = new List<Day>()
+                                         {
+                                             new Day(){DateTime = day.DateTime.GetValueOrDefault()},
+                                             new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(1)},
+                                             new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(2)},
+                                             new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(3)},
+                                             new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(4)}
+                                         }
+                                     });
+                                     schedules.Add(schedule);
+                                 }
+                                 
+                                 if (schedule.Weeks.FirstOrDefault(w => w.StartDate == startDate) == null)
+                                 {
+                                     schedule.Weeks.Add(new Week()
+                                     {
+                                         WeekType = WeekType.WithDate,
+                                         StartDate = model.Days[0].DateTime,
+                                         FinishDate = model.Days[0].DateTime.GetValueOrDefault().AddDays(4),
+                                         Days = new List<Day>()
+                                         {
+                                             new Day(){DateTime = day.DateTime.GetValueOrDefault()},
+                                             new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(1)},
+                                             new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(2)},
+                                             new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(3)},
+                                             new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(4)}
+                                         }
+                                     });
+                                 }
+
+                                 Lesson lesson = new Lesson()
+                                 {
+                                     Name = model.NameLessons[a],
+                                     Number = day.Lessons[a][i].Number,
+                                     LessonType = LessonType.Practice,
+                                 };
+                             
+                                 schedule.Weeks.First(w=> w.StartDate == model.Days[0].DateTime.GetValueOrDefault()).Days.First(d=>d.DateTime==day.DateTime.GetValueOrDefault()).Lessons.Add(lesson);    
+                             }
+                         }
+                     }
+                 }
+             }
+
+             foreach (var s in schedules)
+             {
+                 _context.Weeks.Add(s.Weeks.First(w => w.StartDate == (DateTime)startDate));
+             }
              await _context.SaveChangesAsync();
              
              return Ok(schedules);
