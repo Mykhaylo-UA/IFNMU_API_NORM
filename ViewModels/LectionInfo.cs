@@ -6,5 +6,10 @@ namespace IFNMU_API_NORM.ViewModels
     {
         public string Letter { get; set; }
         public List<string> Groups { get; set; }
+
+        public LectionInfo()
+        {
+            Groups = new List<string>();
+        }
     }
 }
