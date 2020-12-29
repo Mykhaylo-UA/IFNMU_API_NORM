@@ -9,6 +9,7 @@
         <e p="BaseModel.cs" t="Include" />
       </e>
       <e p="Controllers" t="Include">
+        <e p="LessonController.cs" t="Include" />
         <e p="ScheduleController.cs" t="Include" />
       </e>
       <e p="Enums" t="Include">
@@ -40,7 +41,6 @@
       <e p="appsettings.Development.json" t="Include" />
       <e p="appsettings.json" t="Include" />
       <e p="bin" t="ExcludeRecursive" />
-      <e p="db.db" t="Include" />
       <e p="obj" t="ExcludeRecursive">
         <e p="Debug" t="Include">
           <e p="net5.0" t="Include">

@@ -45,10 +45,14 @@ namespace IFNMU_API_NORM.Controllers
                  .Include(s => s.Weeks.Where(w=>w.WeekNumber == (byte)numberWeek))
                  .ThenInclude(w=>w.Days)
                  .ThenInclude(d=>d.Lessons)
-                 .Where(s => s.Course == (byte)course && s.Faculty == (Faculty)faculty)
+                 .Where(s => s.Course == (byte)course && s.Faculty == (Faculty)faculty  && s.ScheduleType== ScheduleType.Short
+                             && s.Weeks.Where(w=>w.WeekNumber==(byte)numberWeek).Count() > 0)
                  .ToListAsync();
              
+             if(schedules == null || schedules.Count == 0) return NotFound();
+
              List<LectionInfo> lectionInfos = new List<LectionInfo>();
+             
              
              if (schedules[0].LectionInfo != null)
              {
@@ -111,8 +115,14 @@ namespace IFNMU_API_NORM.Controllers
 
                  foreach (var o in groupOfDay)
                  {
-                     List<LessonViewModel> lvm = new List<LessonViewModel>();
-                     
+                     List<LessonViewModel> lvm = new List<LessonViewModel>()
+                         {
+                             new LessonViewModel(){Number = 1, String = ""},
+                             new LessonViewModel(){Number = 2, String = ""},
+                             new LessonViewModel(){Number = 3, String = ""},
+                             new LessonViewModel(){Number = 4, String = ""}
+                         };
+
                      var groupOfNumber = o.GroupBy(d => d.Number);
 
                      foreach (var k in groupOfNumber)
@@ -133,8 +143,8 @@ namespace IFNMU_API_NORM.Controllers
                                          if (les.Day.Week.Schedule.Group == x)
                                          {
                                              lec = $"{s.Letter},{les.Number}";
+                                             brea = true;
                                          }
-                                         brea = true;
                                      }
 
                                      if (brea)
@@ -156,14 +166,31 @@ namespace IFNMU_API_NORM.Controllers
                              
                              name += les.Day.Week.Schedule.Group + " ";
                          }
-                         
-                         lvm.Add(new LessonViewModel(){Number = k.Key, String = name});
+
+                         lvm.First(l=>l.Number == k.Key).String = name;
                      }
 
                      model.Days.First(d => d.DayOfWeek == o.Key).Lessons.Add(lvm);
                  }
              }
-             
+
+             foreach (var a in model.Days)
+             {
+                 for(int k = 0; k< a.Lessons.Count; k++)
+                 { 
+                     if (a.Lessons[k].Count < 4)
+                     {
+                         if(a.Lessons[k].FirstOrDefault(l=> l.Number == 1) == null) a.Lessons[k].Add(new LessonViewModel(){Number=1, String = ""});
+                         if(a.Lessons[k].FirstOrDefault(l=> l.Number == 2) == null) a.Lessons[k].Add(new LessonViewModel(){Number=2, String = ""});
+                         if(a.Lessons[k].FirstOrDefault(l=> l.Number == 3) == null) a.Lessons[k].Add(new LessonViewModel(){Number=3, String = ""});
+                         if(a.Lessons[k].FirstOrDefault(l=> l.Number == 4) == null) a.Lessons[k].Add(new LessonViewModel(){Number=4, String = ""});
+                     }
+
+                     
+                     a.Lessons[k] = a.Lessons[k].OrderBy(l => l.Number).ToList();
+                 }
+             }
+
              return Ok(model);
          }
          
@@ -211,6 +238,7 @@ namespace IFNMU_API_NORM.Controllers
 
                          foreach (string group in splitStrings)
                          {
+                             if (group.Trim() == String.Empty) continue;
                              if (group.Contains(","))
                              {
                                  string[] info = group.Split(",");
@@ -341,7 +369,7 @@ namespace IFNMU_API_NORM.Controllers
                  }
              }
 
-             List<Schedule> schedules = await _context.Schedules.Where(s=> s.Course == (byte)course && s.Faculty == (Faculty)faculty)
+             List<Schedule> schedules = await _context.Schedules.Where(s=> s.Course == (byte)course && s.Faculty == (Faculty)faculty && s.Weeks.Where(w=>w.WeekNumber==(byte)numberWeek).Count() > 0)
                  .Include(s=> s.Weeks.Where(w=>w.WeekNumber==numberWeek)).ToListAsync();
 
              foreach (var schedule in schedules)
@@ -360,6 +388,8 @@ namespace IFNMU_API_NORM.Controllers
 
                          foreach (string group in splitStrings)
                          {
+                             if (group.Trim() == String.Empty) continue;
+                             
                              if (group.Contains(","))
                              {
                                  string[] info = group.Split(",");
@@ -375,28 +405,15 @@ namespace IFNMU_API_NORM.Controllers
                                      {
                                          schedule = new Schedule()
                                          {
+                                             Id= Guid.NewGuid(),
                                              ScheduleType = ScheduleType.Short,
                                              Group = gr,
                                              Course = (byte)course,
                                              Faculty = (Faculty)faculty,
                                              LectionInfo = lectionInfo
                                          };
-                                         _context.Schedules.Add(schedule);
-                                         await _context.SaveChangesAsync();
+                                         schedule = _context.Schedules.Add(schedule).Entity;
                                          
-                                         schedule.Weeks.Add(new Week()
-                                         {
-                                             WeekType = WeekType.WithNumber,
-                                             WeekNumber = numberWeek,
-                                             Days = new List<Day>()
-                                             {
-                                                 new Day(){DayOfWeek = DayOfWeek.Monday},
-                                                 new Day(){DayOfWeek = DayOfWeek.Tuesday},
-                                                 new Day(){DayOfWeek = DayOfWeek.Wednesday},
-                                                 new Day(){DayOfWeek = DayOfWeek.Thursday},
-                                                 new Day(){DayOfWeek = DayOfWeek.Friday}
-                                             }
-                                         });
                                          schedules.Add(schedule);
                                      }
 
@@ -413,7 +430,8 @@ namespace IFNMU_API_NORM.Controllers
                                                  new Day(){DayOfWeek = DayOfWeek.Wednesday},
                                                  new Day(){DayOfWeek = DayOfWeek.Thursday},
                                                  new Day(){DayOfWeek = DayOfWeek.Friday}
-                                             }
+                                             },
+                                             ScheduleId = schedule.Id
                                          });
                                      }
 
@@ -436,28 +454,15 @@ namespace IFNMU_API_NORM.Controllers
                                  {
                                      schedule = new Schedule()
                                      {
+                                         Id= Guid.NewGuid(),
                                          ScheduleType = ScheduleType.Short,
                                          Group = group,
                                          Course = (byte)course,
                                          Faculty = (Faculty)faculty,
                                          LectionInfo = lectionInfo
                                      };
-                                     _context.Schedules.Add(schedule);
-                                     await _context.SaveChangesAsync();
+                                     schedule = _context.Schedules.Add(schedule).Entity;
                                      
-                                     schedule.Weeks.Add(new Week()
-                                     {
-                                         WeekType = WeekType.WithNumber,
-                                         WeekNumber = numberWeek,
-                                         Days = new List<Day>()
-                                         {
-                                             new Day(){DayOfWeek = DayOfWeek.Monday},
-                                             new Day(){DayOfWeek = DayOfWeek.Tuesday},
-                                             new Day(){DayOfWeek = DayOfWeek.Wednesday},
-                                             new Day(){DayOfWeek = DayOfWeek.Thursday},
-                                             new Day(){DayOfWeek = DayOfWeek.Friday}
-                                         }
-                                     });
                                      schedules.Add(schedule);
                                  }
                                  
@@ -474,7 +479,8 @@ namespace IFNMU_API_NORM.Controllers
                                              new Day(){DayOfWeek = DayOfWeek.Wednesday},
                                              new Day(){DayOfWeek = DayOfWeek.Thursday},
                                              new Day(){DayOfWeek = DayOfWeek.Friday}
-                                         }
+                                         },
+                                         ScheduleId = schedule.Id
                                      });
                                  }
                                  
@@ -527,8 +533,14 @@ namespace IFNMU_API_NORM.Controllers
                  .Include(s => s.Weeks.Where(w=>w.StartDate == (DateTime)startDate))
                  .ThenInclude(w=>w.Days)
                  .ThenInclude(d=>d.Lessons)
-                 .Where(s => s.Course == (byte)course && s.Faculty == (Faculty)faculty)
+                 .Where(s => s.Course == (byte)course && s.Faculty == (Faculty)faculty && s.ScheduleType== ScheduleType.Full 
+                             && s.Weeks.Where(w=>w.StartDate==startDate).Count() > 0)
                  .ToListAsync();
+             
+             if(schedules == null || schedules.Count == 0) return NotFound();
+
+             Console.WriteLine(schedules.Count);
+             Console.WriteLine(schedules[0]);
              
              List<LectionInfo> lectionInfos = new List<LectionInfo>();
              
@@ -596,7 +608,11 @@ namespace IFNMU_API_NORM.Controllers
 
                  foreach (var o in groupOfDay)
                  {
-                     List<LessonViewModel> lvm = new List<LessonViewModel>();
+                     List<LessonViewModel> lvm = new List<LessonViewModel>()
+                     {
+                         new LessonViewModel(){Number = 1, String = ""},
+                         new LessonViewModel(){Number = 3, String = ""}
+                     };
                      
                      var groupOfNumber = o.GroupBy(d => d.Number);
 
@@ -618,8 +634,8 @@ namespace IFNMU_API_NORM.Controllers
                                          if (les.Day.Week.Schedule.Group == x)
                                          {
                                              lec = $"{s.Letter},{les.Number},{les.NumberAuditor}";
+                                             brea = true;
                                          }
-                                         brea = true;
                                      }
 
                                      if (brea)
@@ -641,11 +657,24 @@ namespace IFNMU_API_NORM.Controllers
                              
                              name += les.Day.Week.Schedule.Group + " ";
                          }
-                         
-                         lvm.Add(new LessonViewModel(){Number = k.Key, String = name});
+                         lvm.First(l=>l.Number == k.Key).String = name;
                      }
 
                      model.Days.First(d => d.DateTime == o.Key).Lessons.Add(lvm);
+                 }
+             }
+             foreach (var a in model.Days)
+             {
+                 for(int k = 0; k< a.Lessons.Count; k++)
+                 { 
+                     if (a.Lessons[k].Count < 2)
+                     {
+                         if(a.Lessons[k].FirstOrDefault(l=> l.Number == 1) == null) a.Lessons[k].Add(new LessonViewModel(){Number=1, String = ""});
+                         if(a.Lessons[k].FirstOrDefault(l=> l.Number == 3) == null) a.Lessons[k].Add(new LessonViewModel(){Number=3, String = ""});
+                     }
+
+                     
+                     a.Lessons[k] = a.Lessons[k].OrderBy(l => l.Number).ToList();
                  }
              }
              
@@ -696,6 +725,8 @@ namespace IFNMU_API_NORM.Controllers
 
                          foreach (string group in splitStrings)
                          {
+                             if (group.Trim() == String.Empty) continue;
+                             
                              if (group.Contains(","))
                              {
                                  string[] info = group.Split(",");
@@ -832,14 +863,16 @@ namespace IFNMU_API_NORM.Controllers
                  }
              }
 
-             List<Schedule> schedules = await _context.Schedules.Where(s=> s.Course == (byte)course && s.Faculty == (Faculty)faculty)
+             List<Schedule> schedules = await _context.Schedules.Where(s=> s.Course == (byte)course && s.Faculty == (Faculty)faculty && s.Weeks.Where(w=>w.StartDate==startDate).Count() > 0)
                  .Include(s=> s.Weeks.Where(w=>w.StartDate==(DateTime)startDate)).ToListAsync();
 
              foreach (var schedule in schedules)
              {
                  _context.Weeks.RemoveRange(schedule.Weeks);
              }
+
              await _context.SaveChangesAsync();
+             Console.WriteLine("delete weeks");
              
              foreach (DayViewModel day in model.Days)
              {
@@ -851,6 +884,8 @@ namespace IFNMU_API_NORM.Controllers
 
                          foreach (string group in splitStrings)
                          {
+                             if (group.Trim() == String.Empty) continue;
+                             
                              if (group.Contains(","))
                              {
                                  string[] info = group.Split(",");
@@ -867,29 +902,15 @@ namespace IFNMU_API_NORM.Controllers
                                      {
                                          schedule = new Schedule()
                                          {
+                                             Id= Guid.NewGuid(),
                                              ScheduleType = ScheduleType.Full,
                                              Group = gr,
                                              Course = (byte)course,
                                              Faculty = (Faculty)faculty,
-                                             LectionInfo = lectionInfo
+                                             LectionInfo = lectionInfo,
                                          };
-                                         _context.Schedules.Add(schedule);
-                                         await _context.SaveChangesAsync();
+                                         schedule = _context.Schedules.Add(schedule).Entity;
                                          
-                                         schedule.Weeks.Add(new Week()
-                                         {
-                                             WeekType = WeekType.WithDate,
-                                             StartDate = model.Days[0].DateTime,
-                                             FinishDate = model.Days[0].DateTime.GetValueOrDefault().AddDays(4),
-                                             Days = new List<Day>()
-                                             {
-                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault()},
-                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(1)},
-                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(2)},
-                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(3)},
-                                                 new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(4)}
-                                             }
-                                         });
                                          schedules.Add(schedule);
                                      }
 
@@ -897,6 +918,7 @@ namespace IFNMU_API_NORM.Controllers
                                      {
                                          schedule.Weeks.Add(new Week()
                                          {
+                                             Id = Guid.NewGuid(),
                                              WeekType = WeekType.WithDate,
                                              StartDate = model.Days[0].DateTime,
                                              FinishDate = model.Days[0].DateTime.GetValueOrDefault().AddDays(4),
@@ -907,7 +929,8 @@ namespace IFNMU_API_NORM.Controllers
                                                  new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(2)},
                                                  new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(3)},
                                                  new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(4)}
-                                             }
+                                             },
+                                             ScheduleId = schedule.Id
                                          });
                                      }
                                      
@@ -931,36 +954,25 @@ namespace IFNMU_API_NORM.Controllers
                                  {
                                      schedule = new Schedule()
                                      {
+                                         Id= Guid.NewGuid(),
                                          ScheduleType = ScheduleType.Full,
                                          Group = group,
                                          Course = (byte)course,
                                          Faculty = (Faculty)faculty,
                                          LectionInfo = lectionInfo
                                      };
-                                     _context.Schedules.Add(schedule);
-                                     await _context.SaveChangesAsync();
+                                     schedule = _context.Schedules.Add(schedule).Entity;
+
+                                     Console.WriteLine("schedule add id:"+schedule.Id);
                                      
-                                     schedule.Weeks.Add(new Week()
-                                     {
-                                         WeekType = WeekType.WithDate,
-                                         StartDate = model.Days[0].DateTime,
-                                         FinishDate = model.Days[0].DateTime.GetValueOrDefault().AddDays(4),
-                                         Days = new List<Day>()
-                                         {
-                                             new Day(){DateTime = day.DateTime.GetValueOrDefault()},
-                                             new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(1)},
-                                             new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(2)},
-                                             new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(3)},
-                                             new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(4)}
-                                         }
-                                     });
                                      schedules.Add(schedule);
                                  }
-                                 
+                                 Console.WriteLine("if null");
                                  if (schedule.Weeks.FirstOrDefault(w => w.StartDate == startDate) == null)
                                  {
                                      schedule.Weeks.Add(new Week()
                                      {
+                                         Id = Guid.NewGuid(),
                                          WeekType = WeekType.WithDate,
                                          StartDate = model.Days[0].DateTime,
                                          FinishDate = model.Days[0].DateTime.GetValueOrDefault().AddDays(4),
@@ -971,10 +983,14 @@ namespace IFNMU_API_NORM.Controllers
                                              new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(2)},
                                              new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(3)},
                                              new Day(){DateTime = day.DateTime.GetValueOrDefault().AddDays(4)}
-                                         }
+                                         },
+                                         ScheduleId = schedule.Id
                                      });
+                                     
+                                     Console.WriteLine("after if");
                                  }
 
+                                 Console.WriteLine("lesson");
                                  Lesson lesson = new Lesson()
                                  {
                                      Name = model.NameLessons[a],
@@ -989,9 +1005,10 @@ namespace IFNMU_API_NORM.Controllers
                  }
              }
 
+
              foreach (var s in schedules)
              {
-                 _context.Weeks.Add(s.Weeks.First(w => w.StartDate == (DateTime)startDate));
+                 _context.Weeks.Add(s.Weeks.First(w => w.StartDate == startDate.GetValueOrDefault()));
              }
              await _context.SaveChangesAsync();
              

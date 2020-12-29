@@ -12,6 +12,11 @@ namespace IFNMU_API_NORM.Models
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseSqlite("Filename=db.db");
-        } 
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Week>().HasOne(p => p.Schedule).WithMany(t => t.Weeks).OnDelete(DeleteBehavior.Cascade);
+        }
     }
 }
