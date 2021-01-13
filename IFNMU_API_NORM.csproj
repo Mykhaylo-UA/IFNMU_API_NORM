@@ -7,9 +7,20 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.1" NoWarn="NU1605" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="5.0.1" NoWarn="NU1605" />
+        <PackageReference Include="Microsoft.AspNetCore.SpaServices" Version="5.0.0-preview.8.20414.8" />
+        <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="5.0.1" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.1" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.1" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="ClientApp\public\manifest.json" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="ClientApp" />
+      <Folder Include="wwwroot" />
     </ItemGroup>
 
 </Project>

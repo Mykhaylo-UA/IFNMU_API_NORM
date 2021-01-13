@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace IFNMU_API_NORM.Controllers
  {
      [ApiController]
-     [Route("[controller]")]
+     [Route("api/[controller]")]
      public class ScheduleController : ControllerBase
      {
          private readonly DatabaseContext _context;
@@ -89,8 +89,11 @@ namespace IFNMU_API_NORM.Controllers
                      }
                  }
              }
+
+             List<SubGroupObject> subGroupList = new List<SubGroupObject>();
              
              Regex regex = new Regex(@"\W\w\s\d*\W");
+             Regex regexSubGroup = new Regex(@"\W\w+\s\d*\W+");
              for(int b=0; b<lessons.Count; b++)
              {
                  MatchCollection matches = regex.Matches(lessons[b].Name);
@@ -99,6 +102,31 @@ namespace IFNMU_API_NORM.Controllers
                      foreach (Match match in matches)
                      {
                          lessons[b].Name = lessons[b].Name.Replace(match.Value, "").Trim();
+                     }
+                 }
+
+                 MatchCollection matchSubGroup = regexSubGroup.Matches(lessons[b].Name);
+                 if (matchSubGroup.Count > 0)
+                 {
+                     foreach (Match match in matchSubGroup)
+                     {
+                         string s = "";
+                         if (match.Value.Contains("+"))
+                         {
+                             s = "+";
+                         }
+                         else if (match.Value.Contains("-"))
+                         {
+                             s = "-";
+                         }
+                         else if (match.Value.Contains("*"))
+                         {
+                             s = "*";
+                         }
+                         
+                         lessons[b].Name = lessons[b].Name.Replace(match.Value, "").Trim();
+                         
+                         subGroupList.Add(new SubGroupObject() { IdSubGroup = lessons[b].Id, String = s});
                      }
                  }
              }
@@ -163,8 +191,17 @@ namespace IFNMU_API_NORM.Controllers
                                      continue;
                                  }
                              }
-                             
-                             name += les.Day.Week.Schedule.Group + " ";
+
+                             if (les.Day.Week.Schedule.Group == "333")
+                             {
+                                 name += "";
+                             }
+                             else
+                             {
+                                 SubGroupObject obj = subGroupList.FirstOrDefault(a=> a.IdSubGroup == les.Id);
+                                 
+                                 name += les.Day.Week.Schedule.Group+ (obj != null ? obj.String : "") + " ";
+                             }
                          }
 
                          lvm.First(l=>l.Number == k.Key).String = name;
@@ -238,7 +275,11 @@ namespace IFNMU_API_NORM.Controllers
 
                          foreach (string group in splitStrings)
                          {
-                             if (group.Trim() == String.Empty) continue;
+                             bool empty = false;
+                             
+                             if (group.Trim() == String.Empty) empty=true;
+                             
+                             
                              if (group.Contains(","))
                              {
                                  string[] info = group.Split(",");
@@ -257,7 +298,7 @@ namespace IFNMU_API_NORM.Controllers
                                              ScheduleType = ScheduleType.Short,
                                              Group = gr,
                                              Course = (byte)course,
-                                             Faculty = (Faculty)faculty,
+                                             Faculty = GetFaculty(gr),
                                              LectionInfo = lectionInfo
                                          };
                                          schedule.Weeks.Add(new Week()
@@ -290,15 +331,33 @@ namespace IFNMU_API_NORM.Controllers
                              }
                              else
                              {
-                                 Schedule schedule = schedules.FirstOrDefault(s => s.Group == group);
+                                 string subgroup = string.Empty;
+
+                                 if (group.Contains("+"))
+                                 {
+                                     subgroup = " (підгрупа +)";
+                                 }
+                                 else if(group.Contains("-"))
+                                 {
+                                     subgroup = " (підгрупа -)";
+                                 }
+                                 else if(group.Contains("*"))
+                                 {
+                                     subgroup = " (підгрупа *)";
+                                 }
+
+                                 string newGroup = group.Replace("+", "").Replace("-", "").Replace("*", "");
+
+                                 
+                                 Schedule schedule = schedules.FirstOrDefault(s => s.Group == (empty ? "333":newGroup));
                                  if (schedule == null)
                                  {
                                      schedule = new Schedule()
                                      {
                                          ScheduleType = ScheduleType.Short,
-                                         Group = group,
+                                         Group = (empty ? "333": GetFaculty(newGroup) != faculty ? "333" : newGroup),
                                          Course = (byte)course,
-                                         Faculty = (Faculty)faculty,
+                                         Faculty = (empty ? (Faculty)faculty : GetFaculty(newGroup)),
                                          LectionInfo = lectionInfo
                                      };
                                      schedule.Weeks.Add(new Week()
@@ -317,13 +376,15 @@ namespace IFNMU_API_NORM.Controllers
                                      schedules.Add(schedule);
                                  }
 
+                                Console.WriteLine(model.NameLessons[a] + "    | namelesson after");
+
                                  Lesson lesson = new Lesson()
                                  {
-                                     Name = model.NameLessons[a],
+                                     Name = model.NameLessons[a] + (subgroup != String.Empty ? subgroup : ""),
                                      Number = day.Lessons[a][i].Number,
                                      LessonType = LessonType.Practice,
                                  };
-                             
+                                    Console.WriteLine(lesson.Name + "    | namelesson before");
                                  schedule.Weeks.First(w=> w.WeekNumber==numberWeek).Days.First(d=>d.DayOfWeek==day.DayOfWeek).Lessons.Add(lesson);    
                              }
                          }
@@ -388,7 +449,9 @@ namespace IFNMU_API_NORM.Controllers
 
                          foreach (string group in splitStrings)
                          {
-                             if (group.Trim() == String.Empty) continue;
+                             bool empty = false;
+                             
+                             if (group.Trim() == String.Empty) empty=true;
                              
                              if (group.Contains(","))
                              {
@@ -409,7 +472,7 @@ namespace IFNMU_API_NORM.Controllers
                                              ScheduleType = ScheduleType.Short,
                                              Group = gr,
                                              Course = (byte)course,
-                                             Faculty = (Faculty)faculty,
+                                             Faculty = GetFaculty(gr),
                                              LectionInfo = lectionInfo
                                          };
                                          schedule = _context.Schedules.Add(schedule).Entity;
@@ -449,16 +512,33 @@ namespace IFNMU_API_NORM.Controllers
                              }
                              else
                              {
-                                 Schedule schedule = schedules.FirstOrDefault(s => s.Group == group);
+                                 string subgroup = string.Empty;
+
+                                 if (group.Contains("+"))
+                                 {
+                                     subgroup = " (підгрупа +)";
+                                 }
+                                 else if(group.Contains("-"))
+                                 {
+                                     subgroup = " (підгрупа -)";
+                                 }
+                                 else if(group.Contains("*"))
+                                 {
+                                     subgroup = " (підгрупа *)";
+                                 }
+
+                                 string newGroup = group.Replace("+", "").Replace("-", "").Replace("*", "");
+                                 
+                                 Schedule schedule = schedules.FirstOrDefault(s => s.Group == (empty ? "333":newGroup));
                                  if (schedule == null)
                                  {
                                      schedule = new Schedule()
                                      {
                                          Id= Guid.NewGuid(),
                                          ScheduleType = ScheduleType.Short,
-                                         Group = group,
+                                         Group = (empty ? "333": GetFaculty(newGroup) != faculty ? "333" : newGroup),
                                          Course = (byte)course,
-                                         Faculty = (Faculty)faculty,
+                                         Faculty = (empty ? (Faculty)faculty : GetFaculty(newGroup)),
                                          LectionInfo = lectionInfo
                                      };
                                      schedule = _context.Schedules.Add(schedule).Entity;
@@ -486,7 +566,7 @@ namespace IFNMU_API_NORM.Controllers
                                  
                                  Lesson lesson = new Lesson()
                                  {
-                                     Name = model.NameLessons[a],
+                                     Name = model.NameLessons[a] + (subgroup != String.Empty ? subgroup : ""),
                                      Number = day.Lessons[a][i].Number,
                                      LessonType = LessonType.Practice,
                                  };
@@ -579,12 +659,25 @@ namespace IFNMU_API_NORM.Controllers
                      }
                  }
              }
+
+             List<Guid> guidsChangeNumber = new List<Guid>();
+             
+             List<SubGroupObject> subGroupList = new List<SubGroupObject>();             
              
              Regex regex = new Regex(@"\W\w\s\d*\W");
+             Regex regexSubGroup = new Regex(@"\W\w+\s\d*\W+");
              for(int b=0; b<lessons.Count; b++)
              {
-                 if (lessons[b].Number >= 4) lessons[b].Number = 3;
-                 else if(lessons[b].Number == 2) lessons[b].Number = 1;
+                 if (lessons[b].Number >= 4)
+                 {
+                     lessons[b].Number = 3;
+                     guidsChangeNumber.Add(lessons[b].Id);
+                 }
+                 else if (lessons[b].Number == 2)
+                 {
+                     lessons[b].Number = 1;
+                     guidsChangeNumber.Add(lessons[b].Id);
+                 }
                  
                  MatchCollection matches = regex.Matches(lessons[b].Name);
                  if (matches.Count > 0)
@@ -592,6 +685,31 @@ namespace IFNMU_API_NORM.Controllers
                      foreach (Match match in matches)
                      {
                          lessons[b].Name = lessons[b].Name.Replace(match.Value, "").Trim();
+                     }
+                 }
+                 
+                 MatchCollection matchSubGroup = regexSubGroup.Matches(lessons[b].Name);
+                 if (matchSubGroup.Count > 0)
+                 {
+                     foreach (Match match in matchSubGroup)
+                     {
+                         string s = "";
+                         if (match.Value.Contains("+"))
+                         {
+                             s = "+";
+                         }
+                         else if (match.Value.Contains("-"))
+                         {
+                             s = "-";
+                         }
+                         else if (match.Value.Contains("*"))
+                         {
+                             s = "*";
+                         }
+                         
+                         lessons[b].Name = lessons[b].Name.Replace(match.Value, "").Trim();
+                         
+                         subGroupList.Add(new SubGroupObject() { IdSubGroup = lessons[b].Id, String = s});
                      }
                  }
              }
@@ -633,7 +751,13 @@ namespace IFNMU_API_NORM.Controllers
                                      {
                                          if (les.Day.Week.Schedule.Group == x)
                                          {
-                                             lec = $"{s.Letter},{les.Number},{les.NumberAuditor}";
+                                             bool a = guidsChangeNumber.Contains(les.Id);
+                                             
+                                             byte number = a
+                                                 ? (byte)(les.Number + 1)
+                                                 : les.Number;
+                                             
+                                             lec = $"{s.Letter},{number},{les.NumberAuditor}";
                                              brea = true;
                                          }
                                      }
@@ -655,7 +779,16 @@ namespace IFNMU_API_NORM.Controllers
                                  }
                              }
                              
-                             name += les.Day.Week.Schedule.Group + " ";
+                             if (les.Day.Week.Schedule.Group == "333")
+                             {
+                                 name += "";
+                             }
+                             else
+                             {
+                                 SubGroupObject obj = subGroupList.FirstOrDefault(a=> a.IdSubGroup == les.Id);
+                                 
+                                 name += les.Day.Week.Schedule.Group + (obj != null ? obj.String : "") + " ";
+                             }
                          }
                          lvm.First(l=>l.Number == k.Key).String = name;
                      }
@@ -725,7 +858,9 @@ namespace IFNMU_API_NORM.Controllers
 
                          foreach (string group in splitStrings)
                          {
-                             if (group.Trim() == String.Empty) continue;
+                             bool empty = false;
+                             
+                             if (group.Trim() == String.Empty) empty=true;
                              
                              if (group.Contains(","))
                              {
@@ -746,7 +881,7 @@ namespace IFNMU_API_NORM.Controllers
                                              ScheduleType = ScheduleType.Full,
                                              Group = gr,
                                              Course = (byte)course,
-                                             Faculty = (Faculty)faculty,
+                                             Faculty = GetFaculty(gr),
                                              LectionInfo = lectionInfo
                                          };
                                          
@@ -783,15 +918,32 @@ namespace IFNMU_API_NORM.Controllers
                              }
                              else
                              {
-                                 Schedule schedule = schedules.FirstOrDefault(s => s.Group == group);
+                                 string subgroup = string.Empty;
+
+                                 if (group.Contains("+"))
+                                 {
+                                     subgroup = " (клінічка +)";
+                                 }
+                                 else if(group.Contains("-"))
+                                 {
+                                     subgroup = " (клінічка -)";
+                                 }
+                                 else if(group.Contains("*"))
+                                 {
+                                     subgroup = " (клінічка *)";
+                                 }
+
+                                 string newGroup = group.Replace("+", "").Replace("-", "").Replace("*", "");
+                                 
+                                 Schedule schedule = schedules.FirstOrDefault(s => s.Group == (empty ? "333":newGroup));
                                  if (schedule == null)
                                  {
                                      schedule = new Schedule()
                                      {
                                          ScheduleType = ScheduleType.Full,
-                                         Group = group,
+                                         Group = (empty ? "333": GetFaculty(newGroup) != faculty ? "333" : newGroup),
                                          Course = (byte)course,
-                                         Faculty = (Faculty)faculty,
+                                         Faculty = (empty ? (Faculty)faculty : GetFaculty(newGroup)),
                                          LectionInfo = lectionInfo
                                      };
                                      schedule.Weeks.Add(new Week()
@@ -813,7 +965,7 @@ namespace IFNMU_API_NORM.Controllers
 
                                  Lesson lesson = new Lesson()
                                  {
-                                     Name = model.NameLessons[a],
+                                     Name = model.NameLessons[a] + (subgroup != String.Empty ? subgroup : ""),
                                      Number = day.Lessons[a][i].Number,
                                      LessonType = LessonType.Practice,
                                  };
@@ -884,7 +1036,9 @@ namespace IFNMU_API_NORM.Controllers
 
                          foreach (string group in splitStrings)
                          {
-                             if (group.Trim() == String.Empty) continue;
+                             bool empty = false;
+                             
+                             if (group.Trim() == String.Empty) empty=true;
                              
                              if (group.Contains(","))
                              {
@@ -906,7 +1060,7 @@ namespace IFNMU_API_NORM.Controllers
                                              ScheduleType = ScheduleType.Full,
                                              Group = gr,
                                              Course = (byte)course,
-                                             Faculty = (Faculty)faculty,
+                                             Faculty = GetFaculty(gr),
                                              LectionInfo = lectionInfo,
                                          };
                                          schedule = _context.Schedules.Add(schedule).Entity;
@@ -949,16 +1103,33 @@ namespace IFNMU_API_NORM.Controllers
                              }
                              else
                              {
-                                 Schedule schedule = schedules.FirstOrDefault(s => s.Group == group);
+                                 string subgroup = string.Empty;
+
+                                 if (group.Contains("+"))
+                                 {
+                                     subgroup = " (клінічка +)";
+                                 }
+                                 else if(group.Contains("-"))
+                                 {
+                                     subgroup = " (клінічка -)";
+                                 }
+                                 else if(group.Contains("*"))
+                                 {
+                                     subgroup = " (клінічка *)";
+                                 }
+
+                                 string newGroup = group.Replace("+", "").Replace("-", "").Replace("*", "");
+                                 
+                                 Schedule schedule = schedules.FirstOrDefault(s => s.Group == (empty ? "333":newGroup));
                                  if (schedule == null)
                                  {
                                      schedule = new Schedule()
                                      {
                                          Id= Guid.NewGuid(),
                                          ScheduleType = ScheduleType.Full,
-                                         Group = group,
+                                         Group = (empty ? "333": GetFaculty(newGroup) != faculty ? "333" : newGroup),
                                          Course = (byte)course,
-                                         Faculty = (Faculty)faculty,
+                                         Faculty = (empty ? (Faculty)faculty : GetFaculty(newGroup)),
                                          LectionInfo = lectionInfo
                                      };
                                      schedule = _context.Schedules.Add(schedule).Entity;
@@ -993,7 +1164,7 @@ namespace IFNMU_API_NORM.Controllers
                                  Console.WriteLine("lesson");
                                  Lesson lesson = new Lesson()
                                  {
-                                     Name = model.NameLessons[a],
+                                     Name = model.NameLessons[a] + (subgroup != String.Empty ? subgroup : ""),
                                      Number = day.Lessons[a][i].Number,
                                      LessonType = LessonType.Practice,
                                  };
@@ -1013,6 +1184,118 @@ namespace IFNMU_API_NORM.Controllers
              await _context.SaveChangesAsync();
              
              return Ok(schedules);
+         }
+         
+         
+         [HttpDelete]
+         public async Task<IActionResult> Delete([FromQuery]List<Guid> id)
+         {
+             if (id == null) return BadRequest("id == null");
+            
+             List<Guid> delId = new List<Guid>();
+
+             foreach (Guid i in id)
+             {
+                 Schedule f = await _context.Schedules.FirstOrDefaultAsync(l=> l.Id==i);
+
+                 if (f != null)
+                 {
+                     delId.Add(f.Id);
+                     _context.Schedules.Remove(f);
+                 }
+
+             }
+
+             await _context.SaveChangesAsync();
+            
+             return Ok(delId);
+         }
+         
+         [HttpGet]
+         [Route("getAllSchedules")]
+         public async Task<IActionResult> GetAllWeeks()
+         {
+             List<Schedule> schedules = await _context.Schedules.ToListAsync();
+
+             if(schedules == null) return NotFound();
+
+             return Ok(schedules);
+         }
+         
+         [NonAction]
+         public static Faculty GetFaculty(string group)
+         {
+             switch (group)
+             {
+                 case "1":
+                 case "2":
+                 case "3":
+                 case "4":
+                 case "5":
+                 case "6":
+                 case "7":
+                 case "8":
+                 case "9":
+                 case "10":
+                 case "10а":
+                 case "10a":
+                 case "10б": return Faculty.Medicine;
+                 
+                 case "81":
+                 case "82":
+                 case "83":
+                 case "84": return Faculty.ShortMedicine;
+                 
+                 case "31":
+                 case "32":
+                 case "33" : return Faculty.Pediatric;
+                 
+                 case "11":
+                 case "12":
+                 case "13":
+                 case "14" : return Faculty.Stomatology;
+                 
+                 case "18":
+                 case "19": return Faculty.ShortStomatology;
+                 
+                 case "41":
+                 case "42": return Faculty.Farmacy;
+                 
+                 case "49": return Faculty.ShortFarmacy;
+                 
+                 case "91":
+                 case "92":
+                 case "93":
+                 case "94": return Faculty.Reabilitology;
+                 
+                 case "30":
+                 case "30a":
+                 case "30а": return Faculty.Paramedic;
+                 
+                 case "23":
+                 case "24":
+                 case "25":
+                 case "26": return Faculty.Nurse;
+                 
+                 case "47":
+                 case "47a":
+                 case "47а": return Faculty.Farmacy9;
+                 
+                 case "21":
+                 case "21а":
+                 case "21a": return Faculty.Ortopedic;
+                 
+                 case "22": return Faculty.Ortopedic11;
+
+
+                 default: return Faculty.Foreigners;
+             }
+         }
+
+         private class SubGroupObject
+         {
+             public Guid IdSubGroup { get; set; }
+             public string String { get; set; }
          }
      }
  }

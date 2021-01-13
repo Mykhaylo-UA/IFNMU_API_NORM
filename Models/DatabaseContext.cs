@@ -9,9 +9,12 @@ namespace IFNMU_API_NORM.Models
         public DbSet<Day> Days { get; set; }
         public DbSet<Lesson> Lessons { get; set; }
         
+        public DbSet<DirectoryInformation> Directory { get; set; }
+        public DbSet<FileInformation> Files { get; set; }
+        
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlite("Filename=db.db");
+            optionsBuilder.UseSqlite("Filename=wwwroot/db.db");
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

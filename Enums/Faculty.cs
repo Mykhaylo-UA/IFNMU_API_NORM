@@ -14,6 +14,8 @@ namespace IFNMU_API_NORM.Models
         Farmacy9,
         Farmacy11,
         Reabilitology,
-        Foreigners
+        Foreigners,
+        ShortStomatology,
+        ShortFarmacy
     }
 }

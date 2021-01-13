@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.SpaServices.Extensions;
 
 namespace IFNMU_API_NORM
 {
@@ -36,6 +37,11 @@ namespace IFNMU_API_NORM
             services.AddEntityFrameworkSqlite().AddDbContext<DatabaseContext>();
             
             services.AddCors();
+            
+            services.AddSpaStaticFiles(configuration =>
+            {
+                configuration.RootPath = "ClientApp/build";
+            });
         
             services.AddControllers();
             services.AddSwaggerGen(c =>
@@ -54,6 +60,9 @@ namespace IFNMU_API_NORM
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "IFNMU_API_NORM v1"));
             }
 
+            app.UseStaticFiles();
+            app.UseSpaStaticFiles();
+
             app.UseHttpsRedirection();
 
             app.UseCors(builder => builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
@@ -63,6 +72,11 @@ namespace IFNMU_API_NORM
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+
+            app.UseSpa(spa =>
+            {
+                spa.Options.SourcePath = "ClientApp";
+            });
         }
     }
 }
