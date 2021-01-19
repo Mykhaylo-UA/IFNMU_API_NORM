@@ -13,7 +13,9 @@
         <e p="DirectoryController.cs" t="Include" />
         <e p="FileController.cs" t="Include" />
         <e p="LessonController.cs" t="Include" />
+        <e p="LinkController.cs" t="Include" />
         <e p="ScheduleController.cs" t="Include" />
+        <e p="SubDirectoryController.cs" t="Include" />
       </e>
       <e p="Enums" t="Include">
         <e p="Faculty.cs" t="Include" />
@@ -29,7 +31,9 @@
         <e p="DirectoryInformation.cs" t="Include" />
         <e p="FileInformation.cs" t="Include" />
         <e p="Lesson.cs" t="Include" />
+        <e p="Link.cs" t="Include" />
         <e p="Schedule.cs" t="Include" />
+        <e p="SubDirectory.cs" t="Include" />
         <e p="Week.cs" t="Include" />
       </e>
       <e p="Program.cs" t="Include" />
@@ -43,13 +47,15 @@
         <e p="FileViewModel.cs" t="Include" />
         <e p="LectionInfo.cs" t="Include" />
         <e p="LessonViewModel.cs" t="Include" />
+        <e p="LinkViewModel.cs" t="Include" />
         <e p="ScheduleViewModel.cs" t="Include" />
+        <e p="SubDirectoryViewModel.cs" t="Include" />
       </e>
       <e p="appsettings.Development.json" t="Include" />
       <e p="appsettings.json" t="Include" />
       <e p="bin" t="ExcludeRecursive" />
       <e p="obj" t="ExcludeRecursive">
-        <e p="Release" t="Include">
+        <e p="Debug" t="Include">
           <e p="net5.0" t="Include">
             <e p="IFNMU_API_NORM.AssemblyInfo.cs" t="Include" />
           </e>
@@ -57,11 +63,24 @@
       </e>
       <e p="packages" t="ExcludeRecursive" />
       <e p="wwwroot" t="Include">
-        <e p="d4097a09-79fe-4fcf-bb1b-525d1caa96fe" t="Include">
-          <e p="logo.svg" t="Include" />
+        <e p="01ec8250-bd6d-4c51-b576-e3bab61da0ef" t="Include">
+          <e p="23  Поліомієліт Мієліт БАС.docx" t="Include" />
+        </e>
+        <e p="381287b8-2cac-4dcd-8eb0-98affc724766" t="Include">
+          <e p="28 Головний біль Сон.docx" t="Include" />
+          <e p="29 Нейросифіліс ВІЛ.doc" t="Include" />
+          <e p="30 Соматоневрологія.doc" t="Include" />
+          <e p="32 Спадково-дегенеративні.doc" t="Include" />
+          <e p="Історія хвороби Схема.doc" t="Include" />
         </e>
         <e p="db.db" t="Include" />
-        <e p="favicon.ico" t="Include" />
+        <e p="df08e5d3-66b6-420c-bf70-d027f29dafe1" t="Include">
+          <e p="18 Нейроінтоксик..docx" t="Include" />
+          <e p="19 Суд. кровопост..doc" t="Include" />
+        </e>
+        <e p="f049513c-c57a-40df-9233-1ecb5d0a2dae" t="Include">
+          <e p="21 Менінгіти.docx" t="Include" />
+        </e>
       </e>
     </e>
   </component>

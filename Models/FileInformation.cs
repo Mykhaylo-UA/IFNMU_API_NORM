@@ -10,8 +10,12 @@ namespace IFNMU_API_NORM.Models
         public string Path { get; set; }
         
         [JsonIgnore]
-        public Guid DirectoryId { get; set; }
+        public Guid? DirectoryId { get; set; }
         [JsonIgnore]
         public DirectoryInformation Directory { get; set; }
+
+        public Guid? SubDirectoryId {get;set;}
+        [JsonIgnore]
+        public SubDirectory SubDirectory {get;set;}
     }
 }

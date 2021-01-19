@@ -27,7 +27,10 @@ namespace IFNMU_API_NORM.Controllers
         {
             if (id == null) return BadRequest("id == null");
         
-            DirectoryInformation d = await _context.Directory.Include(l=> l.Files).FirstOrDefaultAsync(l => l.Id == id);
+            DirectoryInformation d = await _context.Directory.Include(l=> l.Files)
+                .Include(l=>l.SubDirectories)
+                .Include(l=>l.Links)
+                .FirstOrDefaultAsync(l => l.Id == id);
 
             if (d == null) return NotFound();
 
@@ -52,11 +55,15 @@ namespace IFNMU_API_NORM.Controllers
             }
             
             DirectoryInformation d = await _context.Directory.Include(l=> l.Files)
+                .Include(l=>l.Links)
+                .Include(l=>l.SubDirectories).ThenInclude(l=>l.Files)
                 .FirstOrDefaultAsync(l => l.Course == course && l.NameLesson.Contains(name) && l.Faculty == faculty);
 
             if (d == null) return NotFound();
 
             d.Files = d.Files.OrderBy(f => f.Name).ToList();
+            d.SubDirectories = d.SubDirectories.OrderBy(f => f.Name).ToList();
+            d.Links = d.Links.OrderBy(f=>f.Name).ToList();
 
             return Ok(d);
         }
@@ -64,7 +71,7 @@ namespace IFNMU_API_NORM.Controllers
         [HttpGet("directories")]
         public async Task<IActionResult> GetById()
         {
-            return Ok(await _context.Directory.Include(d=> d.Files).ToListAsync());
+            return Ok(await _context.Directory.Include(d=> d.Files).Include(d=>d.SubDirectories).Include(l=>l.Links).ToListAsync());
         }
 
         [HttpPost]
@@ -82,9 +89,17 @@ namespace IFNMU_API_NORM.Controllers
                 NameLesson = model.NameLesson,
                 Faculty =  model.Faculty
             };
+            
 
             var d = _context.Directory.Add(directory);
             await _context.SaveChangesAsync();
+            
+            var pathDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", d.Entity.Id.ToString());
+                
+            if(!Directory.Exists(pathDir))
+            {
+                Directory.CreateDirectory(pathDir);
+            }
                 
             return Ok(d.Entity);
         }

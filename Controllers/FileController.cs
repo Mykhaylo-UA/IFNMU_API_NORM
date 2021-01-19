@@ -33,20 +33,15 @@ namespace IFNMU_API_NORM.Controllers
         } 
         
         [HttpPost]
-        public async Task<IActionResult> Post([FromForm] FileViewModel model)
+        public async Task<IActionResult> Post([FromForm] FileViewModel model, bool? isSubDir)
         {
+            if(isSubDir==null) return BadRequest("isSubDir is required");
+
             List<FileInformation> list = new List<FileInformation>();
             string message = "";
 
             foreach(IFormFile file in model.FormFiles)
             {
-                var pathDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", model.DirectoryId.ToString());
-                
-                if(!Directory.Exists(pathDir))
-                {
-                    Directory.CreateDirectory(pathDir);
-                }
-                
                 string path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", model.DirectoryId.ToString(), file.FileName);
                 
                 string pathWith = Path.Combine(model.DirectoryId.ToString(), file.FileName);
@@ -64,10 +59,11 @@ namespace IFNMU_API_NORM.Controllers
 
                 FileInformation fileInformation = new FileInformation()
                 {
-                    DirectoryId = model.DirectoryId,
                     Name = file.FileName,
                     Path = pathWith
                 };
+                if((bool)isSubDir) fileInformation.SubDirectoryId = model.DirectoryId;
+                else fileInformation.DirectoryId = model.DirectoryId;
                 
                 var f = _context.Files.Add(fileInformation);
 
